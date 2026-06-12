@@ -6,6 +6,7 @@
     <title>时间邮局网络档案库</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* --- 全局样式与变量 --- */
         :root {
             --bg-archive: #0f0702;
             --wood-dark: #1b0e02;
@@ -19,117 +20,131 @@
 
         body {
             background-color: var(--bg-archive);
-            background-image: 
-                radial-gradient(circle at 50% 45%, rgba(212, 163, 89, 0.22) 0%, rgba(35, 20, 5, 0.6) 45%, rgba(8, 4, 1, 0.95) 100%);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Georgia', serif;
-            min-height: 100vh;
-            /* 适配苹果刘海屏 */
+            background-image: radial-gradient(circle at 50% 45%, rgba(212, 163, 89, 0.22) 0%, rgba(35, 20, 5, 0.6) 45%, rgba(8, 4, 1, 0.95) 100%);
+            font-family: 'Georgia', 'Noto Serif SC', -apple-system, sans-serif; 
+            min-height: 100vh; color: var(--gold); overflow: hidden; position: relative;
+            -webkit-tap-highlight-color: transparent;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-            color: var(--gold);
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
         }
 
         /* 按钮与基础输入框 */
         .btn-retro {
             background: linear-gradient(135deg, #4a3014 0%, #1c1003 100%); color: var(--gold); border: 2px solid var(--gold); 
             padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 4px; font-weight: bold; letter-spacing: 2px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         input[type="text"], input[type="password"] { 
             background: #110a03; border: 1px solid var(--gold-dim); color: var(--paper-cream); padding: 10px; 
-            border-radius: 4px; outline: none; font-size: 1rem; width: 100%; -webkit-appearance: none; 
+            border-radius: 4px; outline: none; font-size: 0.95rem; width: 100%; -webkit-appearance: none; 
         }
 
-        /* 视图管理：确保在手机上 100% 满屏且不可横向滚动 */
-        .page-view { display: none; width: 100vw; min-height: 100vh; position: relative; }
+        .page-view { display: none; width: 100vw; min-height: 100vh; position: relative; z-index: 5; }
         .page-view.active { display: flex; }
         
-        /* --- 大厅响应式 --- */
+        /* 大厅响应式 */
         #viewHall { flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .main-hall-grid { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 40px; text-align: center; }
-        
-        .archive-title-area h1 { font-size: 2.2rem; letter-spacing: 4px; line-height: 1.4; color: #fff7e6; }
-        .archive-title-area p { font-style: italic; color: #9c8052; font-size: 0.95rem; margin-top: 10px; }
-        
+        .main-hall-grid { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 35px; text-align: center; }
+        .archive-title-area h1 { font-size: 2.4rem; letter-spacing: 4px; line-height: 1.4; color: #fff7e6; text-shadow: 0 4px 10px #000; }
+        .archive-title-area p { font-style: italic; color: #9c8052; font-size: 0.95rem; margin-top: 8px; }
         .main-cabinet {
             width: 100%; background: linear-gradient(135deg, var(--wood-light) 0%, var(--wood-dark) 100%); 
-            border: 3px solid #140b02; border-radius: 6px; padding: 30px 20px; box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+            border: 3px solid #140b02; border-radius: 6px; padding: 35px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.9);
             display: flex; flex-direction: column; align-items: center; gap: 20px;
         }
         .cabinet-label { font-size: 0.75rem; letter-spacing: 3px; color: var(--gold); border: 1px solid var(--gold-dim); padding: 4px 12px; }
         .hall-nav-link { color: #a48757; cursor: pointer; text-decoration: underline; font-size: 0.95rem; }
 
-        /* --- 共享暗格（书架） --- */
-        #viewShelf { flex-direction: column; padding: 20px 15px; }
-        .shelf-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; border-bottom: 1px solid var(--gold-dim); padding-bottom: 10px; }
-        .shelf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
+        /* 共享暗格（书架） */
+        #viewShelf { flex-direction: column; padding: 20px 15px; overflow-y: auto; }
+        .shelf-header { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 800px; margin: 0 auto 20px auto; border-bottom: 1px solid var(--gold-dim); padding-bottom: 10px; }
+        .shelf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 800px; margin: 0 auto; }
         @media(min-width: 600px) { .shelf-grid { grid-template-columns: repeat(3, 1fr); } }
 
         .envelope-item {
             background: #e2d4b7; height: 110px; border-radius: 4px; box-shadow: 0 8px 15px rgba(0,0,0,0.4); 
-            position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; overflow: hidden; border: 1px solid #c5b696;
+            position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; overflow: hidden; border: 1px solid #c5b696; cursor: pointer;
         }
         .envelope-seal { position: absolute; top: 15px; left: calc(50% - 14px); width: 28px; height: 28px; background: #8b1e1e; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #dfbe82; font-size: 0.65rem; font-weight: bold; }
-        .envelope-title { color: #3a2e1d; font-size: 0.9rem; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .envelope-meta { color: #705f49; font-size: 0.65rem; text-align: center; }
+        .envelope-title { color: #3a2e1d; font-size: 0.9rem; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; }
+        .envelope-meta { color: #705f49; font-size: 0.65rem; text-align: center; z-index: 2; }
 
-        /* --- 核心优化：写信/读信 全屏弹窗 --- */
+        /* --- 核心重构：多端适配写信/读信主舞台 --- */
         .workspace-overlay { 
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-            background: #090502; display: none; flex-direction: column; z-index: 100; 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: #060402; display: none; flex-direction: column; z-index: 100; overflow: hidden;
+        }
+        @media (min-width: 900px) {
+            .workspace-overlay { flex-direction: row; }
         }
         
-        /* 控制面板：在手机端放在屏幕【顶部】，高度固定，不参与滚动，防止被键盘顶起 */
+        /* 手机端顶栏控制条 */
         .mobile-top-bar {
-            background: #150b02; border-bottom: 1px solid var(--gold-dim);
-            padding: 12px 15px; display: flex; flex-direction: column; gap: 10px;
+            background: #150b02; border-bottom: 1px solid var(--gold-dim); padding: 12px 15px;
+            display: flex; flex-direction: column; gap: 8px; z-index: 110; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        @media (min-width: 900px) {
+            .mobile-top-bar { width: 340px; height: 100vh; border-bottom: none; border-right: 1px solid var(--gold-dim); overflow-y: auto; padding: 20px; gap: 18px; }
         }
         .top-bar-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
         
-        /* 高级配置抽屉：默认折叠，点击才展开，省下绝对的手机空间给信纸 */
+        /* 外观配置抽屉（桌面端永久展开，手机端点击可收缩腾出空间） */
         .config-drawer { 
             display: none; background: #1c1004; border: 1px solid var(--gold-dim); 
-            border-radius: 4px; padding: 12px; margin-top: 5px; flex-direction: column; gap: 12px;
-            max-height: 220px; overflow-y: auto;
+            border-radius: 4px; padding: 12px; margin-top: 4px; flex-direction: column; gap: 12px;
+            max-height: 50vh; overflow-y: auto;
         }
         .config-drawer.open { display: flex; }
+        @media (min-width: 900px) {
+            .config-drawer { display: flex !important; background: transparent; border: none; padding: 0; margin-top: 0; max-height: none; overflow-y: visible; }
+        }
+
+        .panel-section-title { font-size: 0.8rem; margin-bottom: 5px; color: #dfbe82; letter-spacing: 1px; }
 
         .theme-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-        .theme-btn { background: #231407; border: 1px solid #3d250f; color: #bfa37a; padding: 6px; font-size: 0.75rem; border-radius: 3px; text-align: center; }
+        @media (min-width: 900px) { .theme-selector { grid-template-columns: repeat(2, 1fr); } }
+        .theme-btn { background: #231407; border: 1px solid #3d250f; color: #bfa37a; padding: 8px 4px; font-size: 0.75rem; border-radius: 3px; text-align: center; cursor: pointer; }
         .theme-btn.active { border-color: var(--gold); color: var(--gold); background: #36200c; }
         
         .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #fff; margin: 0 auto; }
-        .color-dot.active { border-color: var(--gold); transform: scale(1.1); box-shadow: 0 0 5px var(--gold); }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid transparent; margin: 0 auto; cursor: pointer; }
+        .color-dot.active { border-color: var(--gold); transform: scale(1.15); box-shadow: 0 0 8px var(--gold); }
 
-        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; font-size: 1.1rem; text-align: center; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; font-size: 1.2rem; text-align: center; }
+        .emoji-item { cursor: pointer; background: #1c0e03; border-radius: 3px; padding: 2px; }
 
-        /* 信纸舞台：弹性伸缩，吃满除去顶栏外的全部手机屏幕 */
+        /* 信纸舞台：在手机端动态咬合剩余空间的绝对核心 */
         .paper-stage { 
-            flex: 1; margin: 10px; border-radius: 4px; position: relative; 
+            flex: 1; margin: 12px; border-radius: 5px; position: relative; 
             display: flex; justify-content: center; align-items: center; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
         }
+        @media (min-width: 900px) { .paper-stage { margin: 25px; height: calc(100vh - 50px); } }
+        
         .letter-textarea { 
             width: 100%; height: 100%; background: transparent; border: none; 
-            resize: none; outline: none; font-size: 1.1rem; line-height: 1.8; 
-            padding: 15px; z-index: 5; color: #3a2e1d;
+            resize: none; outline: none; font-size: 1.15rem; line-height: 1.8; 
+            padding: 20px; z-index: 5; color: #3a2e1d; font-family: inherit;
         }
 
-        /* 信纸皮肤底层 */
-        .paper-retro { background-color: var(--paper-cream); background-image: linear-gradient(rgba(180, 160, 120, 0.15) 1px, transparent 1px); background-size: 100% 2rem; border: 8px solid #e2d4b7; box-shadow: inset 0 0 20px rgba(139,118,72,0.3); }
-        .paper-future { background: #05070f; border: 2px solid #00f0ff; }
-        .paper-space { background: radial-gradient(circle at center, #0d1527 0%, #04060b 100%); border: 2px solid #4b5563; }
-        .paper-sea { background: linear-gradient(180deg, #062030 0%, #010a12 100%); border: 2px solid #14b8a6; }
-        .space-canvas, .sea-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        /* 信纸精美皮肤 */
+        .paper-retro { background-color: var(--paper-cream); background-image: linear-gradient(rgba(180, 160, 120, 0.15) 1px, transparent 1px); background-size: 100% 2rem; border: 8px solid #e2d4b7; box-shadow: inset 0 0 25px rgba(139,118,72,0.35); }
+        @media (min-width: 900px) { .paper-retro { border: 16px solid #e2d4b7; } }
+        
+        .paper-future { background: #05070f; border: 2px solid #00f0ff; box-shadow: inset 0 0 30px rgba(0,240,255,0.2); }
+        .paper-space { background: #04060b; border: 2px solid #4b5563; }
+        .paper-sea { background: #010a12; border: 2px solid #14b8a6; }
+        
+        /* 独立画布层层放置 */
+        .effect-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 
-        /* 锁屏与小弹窗响应式 */
+        /* 锁屏弹窗 */
         .dialog-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 150; padding: 20px; }
         .lock-box, .mythic-dialog-box { background: #1a0f03; border: 2px solid var(--gold); border-radius: 6px; padding: 20px; text-align: center; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; }
         .lock-seal { width: 40px; height: 40px; background: #8b1e1e; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: var(--gold); }
         .mythic-dialog-btns { display: flex; gap: 10px; }
-        .btn-mythic { background: #361f0a; border: 1px solid var(--gold-dim); color: var(--gold); padding: 10px; font-size: 0.85rem; border-radius: 3px; flex: 1; }
-        .btn-mythic.confirm-major { background: #8b1e1e; color: #fff; }
+        .btn-mythic { background: #361f0a; border: 1px solid var(--gold-dim); color: var(--gold); padding: 10px; font-size: 0.85rem; border-radius: 3px; flex: 1; cursor: pointer; }
+        .btn-mythic.confirm-major { background: #8b1e1e; color: #fff; border-color: #b03535; }
     </style>
 </head>
 <body>
@@ -159,77 +174,76 @@
     <div class="workspace-overlay" id="workspaceOverlay">
         <div class="mobile-top-bar">
             <div class="top-bar-row">
-                <input type="text" id="letterTitle" placeholder="未命名信笺" style="flex: 1; margin-right: 10px; height: 38px;">
+                <input type="text" id="letterTitle" placeholder="输入信笺标题..." style="flex: 1; margin-right: 10px; height: 38px;">
                 <button class="btn-retro" id="btnToggleConfig" style="padding: 8px 12px; font-size: 0.85rem; white-space: nowrap;">外观配置 ⚙️</button>
             </div>
             
             <div class="config-drawer" id="configDrawer">
                 <div>
-                    <p style="font-size:0.75rem; margin-bottom:5px;">共享密码密码（选填）：</p>
+                    <p class="panel-section-title">共享加锁密匙（选填）：</p>
                     <input type="password" id="letterPassword" placeholder="留空则所有人可公开阅读" style="height:34px;">
                 </div>
                 <div>
-                    <p style="font-size:0.75rem; margin-bottom:5px;">选择信纸：</p>
+                    <p class="panel-section-title">馆藏信纸：</p>
                     <div class="theme-selector">
-                        <button class="theme-btn active" data-theme="retro">复古</button>
-                        <button class="theme-btn" data-theme="future">未来</button>
-                        <button class="theme-btn" data-theme="space">宇宙</button>
-                        <button class="theme-btn" data-theme="sea">海底</button>
+                        <button class="theme-btn active" data-theme="retro">复古公文</button>
+                        <button class="theme-btn" data-theme="future">未来 Neon</button>
+                        <button class="theme-btn" data-theme="space">宇宙邮局</button>
+                        <button class="theme-btn" data-theme="sea">海底邮局</button>
                     </div>
                 </div>
                 <div>
-                    <p style="font-size:0.75rem; margin-bottom:5px;">手稿字体：</p>
-                    <select id="fontSelector" style="width:100%; background:#231407; color:#bfa37a; padding:6px; border:1px solid #3d250f;">
-                        <option value="-apple-system, sans-serif">系统默认字体</option>
+                    <p class="panel-section-title">手稿字体：</p>
+                    <select id="fontSelector" style="width:100%; background:#231407; color:#bfa37a; padding:8px; border:1px solid #3d250f; outline:none; border-radius:4px;">
                         <option value="'Georgia', serif">衬线古典 (Georgia)</option>
+                        <option value="'Noto Serif SC', serif">古风宋体</option>
                         <option value="'Courier New', monospace">打字机体</option>
+                        <option value="-apple-system, sans-serif">系统默认</option>
                     </select>
                 </div>
                 <div>
-                    <p style="font-size:0.75rem; margin-bottom:5px;">墨水颜色：</p>
+                    <p class="panel-section-title">墨水色彩 (10色)：</p>
                     <div class="color-picker" id="colorPicker">
                         <div class="color-dot active" style="background: #3a2e1d;" data-color="#3a2e1d"></div>
                         <div class="color-dot" style="background: #8b1e1e;" data-color="#8b1e1e"></div>
                         <div class="color-dot" style="background: #00f0ff;" data-color="#00f0ff"></div>
+                        <div class="color-dot" style="background: #ff007f;" data-color="#ff007f"></div>
                         <div class="color-dot" style="background: #ffffff;" data-color="#ffffff"></div>
-                        <div class="color-dot" style="background: #eab308;" data-color="#eab308"></div>
                     </div>
                 </div>
                 <div>
-                    <p style="font-size:0.75rem; margin-bottom:5px;">快捷戳印（点击插入）：</p>
+                    <p class="panel-section-title">附加印章：</p>
                     <div class="emoji-grid" id="emojiGrid">
-                        <div>✉️</div><div>📜</div><div>⏳</div><div>🚀</div><div>✨</div>
+                        <div class="emoji-item">✉️</div><div class="emoji-item">📜</div><div class="emoji-item">⏳</div><div class="emoji-item">🚀</div><div class="emoji-item">✨</div>
                     </div>
                 </div>
             </div>
 
-            <div class="top-bar-row" style="margin-top: 5px;">
+            <div class="top-bar-row" style="margin-top: 5px; justify-content: flex-end; gap: 10px;">
                 <button class="btn-retro" id="btnClose" style="background:transparent; padding:8px 15px; font-size:0.9rem;">舍弃</button>
                 <button class="btn-retro" id="btnSave" style="background:var(--gold); color:#150b02; padding:8px 25px; font-size:0.9rem;">封缄入云端</button>
             </div>
         </div>
 
         <div class="paper-stage paper-retro" id="paperStage">
-            <canvas class="space-canvas" id="spaceCanvas" style="display:none;"></canvas>
-            <canvas class="sea-canvas" id="seaCanvas" style="display:none;"></canvas>
+            <canvas class="effect-canvas" id="writeCanvas"></canvas>
             <textarea class="letter-textarea" id="letterTextarea" placeholder="在此处展开信笺，写下您想留存的字句..."></textarea>
         </div>
     </div>
 
     <div class="workspace-overlay" id="readOverlay">
-        <div class="paper-stage" id="readPaperStage" style="margin: 15px 15px 70px 15px;">
-            <canvas class="space-canvas" id="readSpaceCanvas" style="display:none;"></canvas>
-            <canvas class="sea-canvas" id="readSeaCanvas" style="display:none;"></canvas>
+        <div class="paper-stage" id="readPaperStage" style="margin-bottom: 75px;">
+            <canvas class="effect-canvas" id="readCanvas"></canvas>
             <textarea class="letter-textarea" id="readTextarea" readonly></textarea>
         </div>
-        <button class="btn-retro" id="btnCloseRead" style="position:fixed; bottom:15px; left:15px; right:15px; z-index:110;">合上并返回</button>
+        <button class="btn-retro" id="btnCloseRead" style="position:fixed; bottom:15px; left:15px; right:15px; z-index:120;">合上并返回暗格</button>
     </div>
 
     <div class="dialog-overlay" id="lockOverlay">
         <div class="lock-box">
             <div class="lock-seal">🔒</div>
-            <h3 id="lockPromptTitle" style="font-size:1rem;">此信笺已被火漆封缄</h3>
-            <input type="password" id="unlockInput" placeholder="输入密码">
+            <h3 id="lockPromptTitle">此信笺已被火漆封缄</h3>
+            <input type="password" id="unlockInput" placeholder="输入持有密匙">
             <div style="display: flex; gap: 10px; width: 100%;">
                 <button class="btn-retro" style="flex:1; padding:10px; font-size:0.9rem;" id="btnVerifyUnlock">开封</button>
                 <button class="btn-retro" style="flex:1; padding:10px; font-size:0.9rem; background:transparent;" id="btnCancelUnlock">取消</button>
@@ -240,14 +254,14 @@
     <div class="dialog-overlay" id="mythicDialogOverlay" style="z-index: 200;">
         <div class="mythic-dialog-box">
             <div class="lock-seal" id="mythicDialogIcon">📜</div>
-            <div id="mythicDialogMsg" style="font-size:0.95rem; color:#fff;">提示信息</div>
+            <div id="mythicDialogMsg">未知秘令</div>
             <div class="mythic-dialog-btns" id="mythicDialogBtns"></div>
         </div>
     </div>
 
     <script>
         // =========================================================================
-        // 【配置信息：沿用你的 Supabase 凭证】
+        // 【核心数据库配置区】
         // =========================================================================
         const SUPABASE_CONFIG = {
             url: "https://zwizqlsqkissucqbvzjw.supabase.co",
@@ -262,9 +276,10 @@
         let currentTheme = 'retro';
         let activeLetter = null;
         let cachedLetters = [];
-        let animationFrameIds = { space: null, sea: null, readSpace: null, readSea: null };
+        let globalLoopId = null;
         const themeDefaultColors = { retro: '#3a2e1d', future: '#00f0ff', space: '#e0e7ff', sea: '#99f6e4' };
 
+        // DOM 节点定义
         const workspaceOverlay = document.getElementById('workspaceOverlay');
         const configDrawer = document.getElementById('configDrawer');
         const paperStage = document.getElementById('paperStage');
@@ -279,17 +294,16 @@
         const mythicDialogOverlay = document.getElementById('mythicDialogOverlay');
         const mythicDialogMsg = document.getElementById('mythicDialogMsg');
         const mythicDialogBtns = document.getElementById('mythicDialogBtns');
-        const spaceCanvas = document.getElementById('spaceCanvas');
-        const seaCanvas = document.getElementById('seaCanvas');
-        const readSpaceCanvas = document.getElementById('readSpaceCanvas');
-        const readSeaCanvas = document.getElementById('readSeaCanvas');
+        
+        const writeCanvas = document.getElementById('writeCanvas');
+        const readCanvas = document.getElementById('readCanvas');
 
-        // 自定义优雅弹窗
+        // 秘境高定弹窗系统
         const MythicDialog = {
             alert: function(msg) {
                 return new Promise((resolve) => {
                     mythicDialogMsg.innerText = msg; mythicDialogBtns.innerHTML = '';
-                    const btn = document.createElement('button'); btn.className = 'btn-mythic'; btn.innerText = '好的';
+                    const btn = document.createElement('button'); btn.className = 'btn-mythic'; btn.innerText = '已知晓';
                     btn.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(); };
                     mythicDialogBtns.appendChild(btn); mythicDialogOverlay.style.display = 'flex';
                 });
@@ -297,11 +311,12 @@
             confirm: function(msg) {
                 return new Promise((resolve) => {
                     mythicDialogMsg.innerText = msg; mythicDialogBtns.innerHTML = '';
-                    const b1 = document.createElement('button'); b1.className = 'btn-mythic'; b1.innerText = '取消';
+                    const b1 = document.createElement('button'); b1.className = 'btn-mythic'; b1.innerText = '继续留下';
                     b1.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(false); };
-                    const b2 = document.createElement('button'); b2.className = 'btn-mythic confirm-major'; b2.innerText = '确定';
+                    const b2 = document.createElement('button'); b2.className = 'btn-mythic confirm-major'; b2.innerText = '断然离去';
                     b2.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(true); };
-                    mythicDialogBtns.appendChild(b1); mythicDialogBtns.appendChild(b2); mythicDialogOverlay.style.display = 'flex';
+                    mythicDialogBtns.appendChild(b1); mythicDialogOverlay.style.display = 'flex';
+                    setTimeout(() => mythicDialogBtns.appendChild(b2), 50);
                 });
             }
         };
@@ -312,43 +327,48 @@
             if(viewId === 'viewShelf') fetchCloudLetters();
         }
 
-        // 切换展开/收起高级配置面板
+        // 手机端外观配置显示隐藏切换
         document.getElementById('btnToggleConfig').addEventListener('click', () => {
             configDrawer.classList.toggle('open');
-            setTimeout(resizeCanvases, 100);
+            setTimeout(syncCanvasSize, 150);
         });
 
-        function resizeCanvases() {
-            if (workspaceOverlay.style.display === 'flex') triggerThemeEngine(currentTheme, spaceCanvas, seaCanvas, 'space');
-            if (readOverlay.style.display === 'flex' && activeLetter) triggerThemeEngine(activeLetter.theme, readSpaceCanvas, readSeaCanvas, 'readSpace');
+        function syncCanvasSize() {
+            if (workspaceOverlay.style.display === 'flex') runDynamicEngine(currentTheme, writeCanvas);
+            if (readOverlay.style.display === 'flex' && activeLetter) runDynamicEngine(activeLetter.theme, readCanvas);
         }
-        window.addEventListener('resize', resizeCanvases);
+        window.addEventListener('resize', syncCanvasSize);
 
         document.getElementById('btnOpenWorkspace').addEventListener('click', () => {
             workspaceOverlay.style.display = 'flex';
-            configDrawer.classList.remove('open');
+            if(window.innerWidth < 900) configDrawer.classList.remove('open');
             letterTitle.value = ''; letterPassword.value = ''; letterTextarea.value = '';
-            triggerThemeEngine('retro', spaceCanvas, seaCanvas, 'space');
+            fontSelector.value = "'Georgia', serif"; letterTextarea.style.fontFamily = "'Georgia', serif";
+            triggerThemeChange('retro');
         });
 
         document.getElementById('btnClose').addEventListener('click', async () => {
-            const ok = await MythicDialog.confirm('确定放弃当前撰写的文字吗？');
-            if(ok) { stopAllEngines(); workspaceOverlay.style.display = 'none'; }
+            const ok = await MythicDialog.confirm('确定放弃当前撰写的文字吗？未作封缄的手稿将永坠虚无。');
+            if(ok) { shutdownEngine(); workspaceOverlay.style.display = 'none'; }
         });
 
         fontSelector.addEventListener('change', (e) => { letterTextarea.style.fontFamily = e.target.value; });
+
+        function triggerThemeChange(theme) {
+            currentTheme = theme;
+            paperStage.className = 'paper-stage paper-' + theme;
+            letterTextarea.style.color = themeDefaultColors[theme];
+            document.querySelectorAll('.color-dot').forEach(dot => {
+                dot.classList.toggle('active', dot.getAttribute('data-color') === themeDefaultColors[theme]);
+            });
+            runDynamicEngine(theme, writeCanvas);
+        }
 
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                currentTheme = btn.getAttribute('data-theme');
-                paperStage.className = 'paper-stage paper-' + currentTheme;
-                letterTextarea.style.color = themeDefaultColors[currentTheme];
-                triggerThemeEngine(currentTheme, spaceCanvas, seaCanvas, 'space');
-                document.querySelectorAll('.color-dot').forEach(dot => {
-                    dot.classList.toggle('active', dot.getAttribute('data-color') === themeDefaultColors[currentTheme]);
-                });
+                triggerThemeChange(btn.getAttribute('data-theme'));
             });
         });
 
@@ -361,49 +381,134 @@
         });
 
         document.getElementById('emojiGrid').addEventListener('click', (e) => {
-            if(e.target.tagName === 'DIV' && e.target.parentElement.id === 'emojiGrid') {
-                letterTextarea.value += e.target.innerText;
-                letterTextarea.focus();
+            if(e.target.classList.contains('emoji-item')) {
+                letterTextarea.value += e.target.innerText; letterTextarea.focus();
             }
         });
 
-        function stopAllEngines() {
-            Object.keys(animationFrameIds).forEach(key => { if(animationFrameIds[key]) cancelAnimationFrame(animationFrameIds[key]); });
-        }
+        // =========================================================================
+        // 【宇宙巨型星球 + 海底智能游鱼 极光渲染核心引擎】
+        // =========================================================================
+        function shutdownEngine() { if(globalLoopId) { cancelAnimationFrame(globalLoopId); globalLoopId = null; } }
 
-        function triggerThemeEngine(theme, sCanvas, mCanvas, modePrefix) {
-            stopAllEngines(); sCanvas.style.display = 'none'; mCanvas.style.display = 'none';
-            if(theme === 'space') { sCanvas.style.display = 'block'; initSpaceEngine(sCanvas, modePrefix); } 
-            else if (theme === 'sea') { mCanvas.style.display = 'block'; initSeaEngine(mCanvas, modePrefix); }
-        }
+        function runDynamicEngine(theme, canvas) {
+            shutdownEngine();
+            const ctx = canvas.getContext('2d');
+            const box = canvas.parentElement.getBoundingClientRect();
+            canvas.width = box.width; canvas.height = box.height;
+            if(canvas.width === 0 || canvas.height === 0) return;
 
-        function initSpaceEngine(canvas, key) {
-            const ctx = canvas.getContext('2d'); const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width; canvas.height = rect.height; const stars = [];
-            for(let i=0; i<25; i++) { stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.2, alpha: Math.random() }); }
-            function animate() {
-                ctx.clearRect(0,0, canvas.width, canvas.height);
-                stars.forEach(s => { s.alpha += (Math.random() - 0.5) * 0.05; s.alpha = Math.max(0.1, Math.min(1, s.alpha)); ctx.fillStyle = `rgba(255,255,255,${s.alpha})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
-                animationFrameIds[key] = requestAnimationFrame(animate);
+            if(theme === 'retro' || theme === 'future') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); return; 
             }
-            animate();
-        }
 
-        function initSeaEngine(canvas, key) {
-            const ctx = canvas.getContext('2d'); const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width; canvas.height = rect.height; const bubbles = [];
-            for(let i=0; i<8; i++) { bubbles.push({ x: Math.random()*canvas.width, y: canvas.height + Math.random()*20, r: Math.random()*2+1, speed: Math.random()*0.4+0.3 }); }
-            function animate() {
-                ctx.clearRect(0,0, canvas.width, canvas.height); ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-                bubbles.forEach(b => { b.y -= b.speed; if(b.y < -10) b.y = canvas.height + 10; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); });
-                animationFrameIds[key] = requestAnimationFrame(animate);
+            // 1. 宇宙邮局物理世界设定 (包含巨型发光星球、碎星、以及流星群)
+            if(theme === 'space') {
+                const centerPlanet = {
+                    x: canvas.width * 0.85, y: canvas.height * 0.25,
+                    baseR: Math.min(canvas.width, canvas.height) * 0.22, angle: 0
+                };
+                const stars = [];
+                for(let i=0; i<35; i++) {
+                    stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.2, alpha: Math.random(), phase: Math.random()*10 });
+                }
+                const meteors = [];
+                
+                function loopSpace() {
+                    ctx.fillStyle = '#04060b'; ctx.fillRect(0,0, canvas.width, canvas.height);
+                    // 绘漫天碎星
+                    stars.forEach(s => { s.phase += 0.02; const curAlpha = Math.abs(Math.sin(s.phase)); ctx.fillStyle = `rgba(255,255,255,${curAlpha})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+                    // 绘巨型发光星球
+                    centerPlanet.angle += 0.0015;
+                    const glowGrad = ctx.createRadialGradient(centerPlanet.x, centerPlanet.y, centerPlanet.baseR*0.2, centerPlanet.x, centerPlanet.y, centerPlanet.baseR*1.8);
+                    glowGrad.addColorStop(0, 'rgba(103, 58, 183, 0.45)'); glowGrad.addColorStop(0.3, 'rgba(63, 81, 181, 0.25)'); glowGrad.addColorStop(0.6, 'rgba(0, 240, 255, 0.06)'); glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = glowGrad; ctx.beginPath(); ctx.arc(centerPlanet.x, centerPlanet.y, centerPlanet.baseR*1.8, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.save(); ctx.translate(centerPlanet.x, centerPlanet.y); ctx.rotate(centerPlanet.angle);
+                    const surfaceGrad = ctx.createLinearGradient(-centerPlanet.baseR, -centerPlanet.baseR, centerPlanet.baseR, centerPlanet.baseR);
+                    surfaceGrad.addColorStop(0, '#1e1b4b'); surfaceGrad.addColorStop(0.5, '#311042'); surfaceGrad.addColorStop(1, '#030712');
+                    ctx.fillStyle = surfaceGrad; ctx.beginPath(); ctx.arc(0,0, centerPlanet.baseR, 0, Math.PI*2); ctx.fill();
+                    // 星球表面纹理光耀
+                    ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, centerPlanet.baseR * 0.75, 0, Math.PI, true); ctx.stroke();
+                    ctx.restore();
+                    
+                    // 流星肆虐引擎
+                    if(Math.random() < 0.015 && meteors.length < 3) {
+                        meteors.push({ x: Math.random()*canvas.width, y: -20, len: Math.random()*60+40, speed: Math.random()*4+5 });
+                    }
+                    meteors.forEach((m, idx) => {
+                        m.x -= m.speed; m.y += m.speed;
+                        const mGrad = ctx.createLinearGradient(m.x, m.y, m.x + m.len, m.y - m.len);
+                        mGrad.addColorStop(0, 'rgba(255,255,255,0.9)'); mGrad.addColorStop(0.5, 'rgba(0,240,255,0.4)'); mGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.strokeStyle = mGrad; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x+m.len, m.y-m.len); ctx.stroke();
+                        if(m.x < -100 || m.y > canvas.height + 100) meteors.splice(idx, 1);
+                    });
+                    globalLoopId = requestAnimationFrame(loopSpace);
+                }
+                loopSpace();
             }
-            animate();
+
+            // 2. 海底邮局物理生态设定 (包含洋流泡泡、无规则仿生摇摆划动的立体鱼群)
+            if(theme === 'sea') {
+                const bubbles = [];
+                for(let i=0; i<12; i++) { bubbles.push({ x: Math.random()*canvas.width, y: canvas.height + Math.random()*50, r: Math.random()*2+1, speed: Math.random()*0.5+0.3 }); }
+                const schoolOfFish = [];
+                for(let i=0; i<6; i++) {
+                    schoolOfFish.push({
+                        x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+                        length: Math.random()*15+18, speed: Math.random()*0.5+0.5,
+                        angle: Math.random()*Math.PI*2, targetAngle: Math.random()*Math.PI*2,
+                        turnSpeed: 0.02, bodyWave: 0, waveSpeed: Math.random()*0.08+0.08
+                    });
+                }
+                
+                function loopSea() {
+                    const bgGrad = ctx.createLinearGradient(0,0,0, canvas.height);
+                    bgGrad.addColorStop(0, '#041624'); bgGrad.addColorStop(1, '#01070d');
+                    ctx.fillStyle = bgGrad; ctx.fillRect(0,0, canvas.width, canvas.height);
+                    
+                    // 渲染上升气泡
+                    ctx.fillStyle = "rgba(20, 184, 166, 0.15)";
+                    bubbles.forEach(b => { b.y -= b.speed; if(b.y < -10) b.y = canvas.height + 10; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); });
+                    
+                    // 渲染无规则灵动鱼群
+                    schoolOfFish.forEach(f => {
+                        f.bodyWave += f.waveSpeed;
+                        if(Math.random() < 0.02) f.targetAngle = Math.random()*Math.PI*2;
+                        // 角度平滑偏转
+                        let angleDiff = f.targetAngle - f.angle;
+                        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                        f.angle += angleDiff * f.turnSpeed;
+                        
+                        // 游动坐标变迁
+                        f.x += Math.cos(f.angle) * f.speed; f.y += Math.sin(f.angle) * f.speed;
+                        if(f.x < -50) f.x = canvas.width + 50; if(f.x > canvas.width + 50) f.x = -50;
+                        if(f.y < -50) f.y = canvas.height + 50; if(f.y > canvas.height + 50) f.y = -50;
+                        
+                        // 绘制具有摆动感知的鱼群实体
+                        ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.angle);
+                        ctx.fillStyle = 'rgba(20, 184, 166, 0.28)';
+                        // 绘制主鱼体
+                        ctx.beginPath(); ctx.ellipse(0, 0, f.length/2, f.length/5, 0, 0, Math.PI*2); ctx.fill();
+                        // 尾鳍随洋流自主摇摆
+                        const tailWhip = Math.sin(f.bodyWave) * 6;
+                        ctx.fillStyle = 'rgba(13, 148, 136, 0.2)';
+                        ctx.beginPath(); ctx.moveTo(-f.length/2, 0);
+                        ctx.lineTo(-f.length*0.9, -f.length/4 + tailWhip); ctx.lineTo(-f.length*0.8, tailWhip); ctx.lineTo(-f.length*0.9, f.length/4 + tailWhip);
+                        ctx.closePath(); ctx.fill();
+                        ctx.restore();
+                    });
+                    globalLoopId = requestAnimationFrame(loopSea);
+                }
+                loopSea();
+            }
         }
 
+        // 封缄云端入库
         document.getElementById('btnSave').addEventListener('click', async () => {
             const content = letterTextarea.value.trim();
-            if(!content) { await MythicDialog.alert('信笺空无一字。'); return; }
+            if(!content) { await MythicDialog.alert('信笺内空无一字，不可落锁归档。'); return; }
             const title = document.getElementById('letterTitle').value.trim() || '未命名信笺';
             const password = document.getElementById('letterPassword').value.trim();
             const color = letterTextarea.style.color;
@@ -412,15 +517,16 @@
             try {
                 const { error } = await supabaseClient.from('letters').insert([{ title, content, password, theme: currentTheme, color, fontFamily }]);
                 if (error) throw error;
-                await MythicDialog.alert(`《${title}》已成功封缄入云端！`);
-                stopAllEngines(); workspaceOverlay.style.display = 'none'; switchView('viewShelf');
-            } catch (error) {
-                await MythicDialog.alert(`错误: ${error.message}`);
+                await MythicDialog.alert(`归档成功！信笺《${title}》已被妥善封存于纪元的夹缝中。`);
+                shutdownEngine(); workspaceOverlay.style.display = 'none'; switchView('viewShelf');
+            } catch (err) {
+                await MythicDialog.alert(`中央封缄受阻: ${err.message}`);
             }
         });
 
+        // 翻阅档案库
         async function fetchCloudLetters() {
-            shelfGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:30px; color:var(--gold-dim);">正在翻阅云端档案库...</div>';
+            shelfGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:var(--gold-dim); font-style:italic;">— 正在转动时空密匙，读取中央云端柜... —</div>';
             try {
                 const { data, error } = await supabaseClient.from('letters').select('*').order('created_at', { ascending: false });
                 if (error) throw error;
@@ -430,14 +536,14 @@
                     date: item.created_at ? new Date(item.created_at).toLocaleDateString() : new Date().toLocaleDateString()
                 }));
                 renderShelfHTML();
-            } catch (error) {
-                shelfGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ef4444;">加载失败: ${error.message}</div>`;
+            } catch (err) {
+                shelfGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ef4444; padding:30px;">读取失败: ${err.message}</div>`;
             }
         }
 
         function renderShelfHTML() {
             shelfGrid.innerHTML = '';
-            if(cachedLetters.length === 0) { shelfGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:30px; color:var(--gold-dim);">— 暂无云端藏信 —</div>'; return; }
+            if(cachedLetters.length === 0) { shelfGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:var(--gold-dim);">— 云端暗格空无一物 —</div>'; return; }
             cachedLetters.forEach(letter => {
                 const env = document.createElement('div'); env.classList.add('envelope-item');
                 env.onclick = () => openEnvelope(letter.id);
@@ -452,7 +558,7 @@
             if(!letter) return;
             if(letter.password) {
                 activeLetter = letter; unlockInput.value = '';
-                document.getElementById('lockPromptTitle').innerText = `请输入《${letter.title}》的专属密匙`;
+                document.getElementById('lockPromptTitle').innerText = `请输入《${letter.title}》的专属持信密匙`;
                 lockOverlay.style.display = 'flex';
             } else { showReaderStage(letter); }
         }
@@ -460,7 +566,7 @@
         document.getElementById('btnVerifyUnlock').addEventListener('click', async () => {
             if(activeLetter && unlockInput.value === activeLetter.password) {
                 lockOverlay.style.display = 'none'; showReaderStage(activeLetter);
-            } else { await MythicDialog.alert('持信密匙错误，火漆未开。'); }
+            } else { await MythicDialog.alert('解印密匙有误，火漆拒绝破除。'); }
         });
 
         document.getElementById('btnCancelUnlock').addEventListener('click', () => { lockOverlay.style.display = 'none'; activeLetter = null; });
@@ -469,11 +575,11 @@
             activeLetter = letter;
             const readPaperStage = document.getElementById('readPaperStage'); const readTextarea = document.getElementById('readTextarea');
             readPaperStage.className = 'paper-stage paper-' + letter.theme; readTextarea.value = letter.content; 
-            readTextarea.style.color = letter.color; readTextarea.style.fontFamily = letter.fontFamily || "-apple-system, sans-serif";
-            triggerThemeEngine(letter.theme, readSpaceCanvas, readSeaCanvas, 'readSpace'); readOverlay.style.display = 'flex';
+            readTextarea.style.color = letter.color; readTextarea.style.fontFamily = letter.fontFamily || "'Georgia', serif";
+            runDynamicEngine(letter.theme, readCanvas); readOverlay.style.display = 'flex';
         }
 
-        document.getElementById('btnCloseRead').addEventListener('click', () => { stopAllEngines(); readOverlay.style.display = 'none'; activeLetter = null; });
+        document.getElementById('btnCloseRead').addEventListener('click', () => { shutdownEngine(); readOverlay.style.display = 'none'; activeLetter = null; });
     </script>
 </body>
 </html>
