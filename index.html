@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间邮局网络档案库</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* --- 全局样式与变量 --- */
+        :root {
+            --bg-archive: #0f0702;
+            --wood-dark: #1b0e02;
+            --wood-light: #2d1c0b;
+            --gold: #c5a059;
+            --gold-dim: #7d6537;
+            --paper-cream: #f4ecd8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-archive);
+            background-image: 
+                radial-gradient(circle at 50% 45%, rgba(212, 163, 89, 0.22) 0%, rgba(35, 20, 5, 0.6) 45%, rgba(8, 4, 1, 0.95) 100%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800' opacity='0.08'%3E%3Ccircle cx='400' cy='400' r='360' stroke='%23c5a059' stroke-width='2' fill='none' stroke-dasharray='5,5'/%3E%3Ccircle cx='400' cy='400' r='240' stroke='%23c5a059' stroke-width='1' fill='none'/%3E%3Cpath d='M400 10 L400 790 M10 400 L790 400 M120 120 L680 680 M120 680 L680 120' stroke='%23c5a059' stroke-width='0.5'/%3E%3Cpath d='M400 200 L430 400 L400 430 L370 400 Z' fill='%23c5a059' opacity='0.5'/%3E%3C/svg%3E"),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600' opacity='0.04'%3E%3Cpath d='M50 80 L550 80 M50 130 L500 130 M50 180 L530 180 M50 230 L480 230 M50 280 L540 280' stroke='%23c5a059' stroke-width='1.5' fill='none'/%3E%3Cpath d='M450 350 C480 320, 520 250, 550 200 C510 260, 480 280, 430 290 C400 300, 320 330, 250 400' stroke='%23c5a059' stroke-width='2' fill='none'/%3E%3C/svg%3E"),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.1 0 0 0 0 0.05 0 0 0 0 0 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23paper)'/%3E%3C/svg%3E");
+            background-attachment: fixed; background-position: center; font-family: 'Georgia', 'Noto Serif SC', serif; min-height: 100vh; color: var(--gold); overflow-x: hidden; position: relative;
+        }
+
+        @keyframes lampFlicker {
+            0%, 100% { opacity: 0.25; transform: scale(1); }
+            30% { opacity: 0.22; transform: scale(0.98); }
+            35% { opacity: 0.27; transform: scale(1.02); }
+        }
+        .body-light-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; background: radial-gradient(circle at 50% 45%, rgba(255, 200, 120, 0.06) 0%, transparent 60%); animation: lampFlicker 6s infinite ease-in-out; }
+
+        .btn-retro {
+            background: linear-gradient(135deg, #4a3014 0%, #1c1003 100%); color: var(--gold); border: 2px solid var(--gold); padding: 14px 35px; font-size: 1.15rem; cursor: pointer; border-radius: 3px; box-shadow: 0 8px 20px rgba(0,0,0,0.7), inset 0 0 15px rgba(197,160,89,0.15); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); letter-spacing: 3px; font-weight: bold;
+        }
+        .btn-retro:hover { transform: scale(1.04) translateY(-2px); box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 20px rgba(197,160,89,0.3); background: linear-gradient(135deg, #61401b 0%, #2b1905 100%); }
+
+        input[type="text"], input[type="password"] { background: #110a03; border: 1px solid var(--gold-dim); color: var(--paper-cream); padding: 8px 12px; border-radius: 4px; outline: none; font-family: inherit; }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: var(--gold); box-shadow: 0 0 5px rgba(197, 160, 89, 0.4); }
+
+        .archive-bg-decor { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: hidden; opacity: 0.25; }
+        .manuscript-text { position: absolute; font-family: 'Times New Roman', serif; font-style: italic; font-size: 1.6rem; color: var(--gold-dim); line-height: 1.6; width: 450px; }
+        .text-pos-1 { top: 12%; left: 40px; transform: rotate(-8deg); border-left: 1px solid rgba(197,160,89,0.2); padding-left: 15px; }
+        .text-pos-2 { bottom: 15%; right: 40px; transform: rotate(5deg); text-align: right; border-right: 1px solid rgba(197,160,89,0.2); padding-right: 15px; }
+
+        .page-view { display: none; width: 100%; min-height: 100vh; position: relative; z-index: 5; }
+        .page-view.active { display: flex; }
+        #viewHall { flex-direction: column; align-items: center; justify-content: center; }
+        .main-hall-grid { width: 100%; max-width: 1100px; padding: 20px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; z-index: 10; }
+        
+        .archive-title-area h1 { font-size: 3.6rem; letter-spacing: 8px; text-shadow: 3px 6px 18px rgba(0,0,0,0.95); line-height: 1.4; margin-bottom: 25px; background: linear-gradient(to bottom, #fff7e6 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .archive-title-area p { font-style: italic; color: #9c8052; font-size: 1.15rem; border-left: 3px solid var(--gold-dim); padding-left: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        
+        .archive-display-area { position: relative; display: flex; flex-direction: column; align-items: center; height: 380px; justify-content: center;}
+        .scattered-paper { position: absolute; width: 250px; height: 320px; background: #261709; border: 1px solid #422a14; box-shadow: 8px 12px 25px rgba(0,0,0,0.8); border-radius: 2px; }
+        .paper-1 { transform: rotate(-14deg) translate(-35px, -15px); opacity: 0.25; background-image: linear-gradient(rgba(197,160,89,0.05) 1px, transparent 1px); background-size: 100% 15px; }
+        .paper-2 { transform: rotate(10deg) translate(30px, 20px); opacity: 0.4; border-color: var(--gold-dim); }
+        
+        .main-cabinet {
+            position: relative; width: 310px; height: 210px; background: linear-gradient(135deg, var(--wood-light) 0%, var(--wood-dark) 100%); border: 4px solid #140b02; border-radius: 4px; box-shadow: 0 25px 50px rgba(0,0,0,0.95), inset 0 0 30px rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; z-index: 10;
+        }
+        .main-cabinet::before { content: ''; position: absolute; top: -10px; width: 105%; height: 10px; background: #140b02; border-radius: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .cabinet-label { font-size: 0.75rem; letter-spacing: 5px; color: var(--gold); border: 1px solid var(--gold-dim); padding: 4px 12px; background: rgba(0,0,0,0.6); box-shadow: inset 0 0 5px rgba(0,0,0,0.8); }
+        .hall-nav-link { margin-top: 12px; color: #a48757; cursor: pointer; text-decoration: underline; font-size: 1rem; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .hall-nav-link:hover { color: var(--gold); text-shadow: 0 0 8px rgba(197,160,89,0.5); }
+
+        #viewShelf { flex-direction: column; align-items: center; padding: 60px 20px; }
+        .shelf-header { text-align: center; margin-bottom: 40px; width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gold-dim); padding-bottom: 15px; }
+        .shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 40px; width: 100%; max-width: 900px; }
+        
+        .envelope-item {
+            background: #e2d4b7; height: 140px; border-radius: 4px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); position: relative; cursor: pointer; transition: all 0.3s ease; border: 1px solid #c5b696; display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; overflow: hidden;
+        }
+        .envelope-item::before { content: ''; position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 110px solid transparent; border-right: 110px solid transparent; border-top: 65px solid #d3c3a4; z-index: 2; }
+        .envelope-seal { position: absolute; top: 45px; left: calc(50% - 18px); width: 36px; height: 36px; background: #8b1e1e; border-radius: 50%; z-index: 3; box-shadow: 0 2px 5px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: #dfbe82; font-size: 0.7rem; }
+        .envelope-item:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 15px 30px rgba(0,0,0,0.7); }
+        .envelope-title { color: #3a2e1d; font-size: 1rem; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 4; }
+        .envelope-meta { color: #705f49; font-size: 0.75rem; text-align: center; margin-top: 4px; z-index: 4; font-style: italic; }
+        .no-letters-tip { grid-column: 1 / -1; text-align: center; color: var(--gold-dim); font-style: italic; padding: 20px 0; }
+
+        .workspace-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 3, 1, 0.96); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(8px); }
+        .editor-container { display: flex; gap: 20px; max-width: 1150px; width: 95%; height: 90vh; }
+        
+        .control-panel { width: 320px; background: #150b02; border: 1px solid var(--gold-dim); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 10; overflow-y: auto; }
+        .control-panel::-webkit-scrollbar { width: 4px; }
+        .control-panel::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+        .panel-section h3 { font-size: 0.85rem; margin-bottom: 6px; border-bottom: 1px solid #2d1c0b; padding-bottom: 4px; color: #dfbe82; letter-spacing: 1px; }
+        .theme-selector { display: flex; flex-direction: column; gap: 5px; }
+        .theme-btn { background: #231407; border: 1px solid #3d250f; color: #bfa37a; padding: 6px 10px; text-align: left; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
+        .theme-btn.active, .theme-btn:hover { border-color: var(--gold); color: var(--gold); background: #36200c; }
+        
+        .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; justify-items: center; padding: 4px 0; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.4); transition: transform 0.2s; }
+        .color-dot.active { border-color: var(--gold); transform: scale(1.2); box-shadow: 0 0 8px var(--gold); }
+        
+        .font-select { width: 100%; background: #231407; border: 1px solid #3d250f; color: #bfa37a; padding: 8px; border-radius: 4px; outline: none; font-family: inherit; font-size: 0.85rem; cursor: pointer; }
+        .font-select:focus { border-color: var(--gold); color: var(--gold); }
+
+        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 1.2rem; }
+        .emoji-item { cursor: pointer; text-align: center; padding: 4px; border-radius: 4px; background: #1c0e03; border: 1px solid #311a06; transition: all 0.2s; }
+        .emoji-item:hover { background: var(--gold); transform: translateY(-2px); }
+        
+        .panel-input-group { display: flex; flex-direction: column; gap: 4px; }
+        .panel-input-group label { font-size: 0.8rem; color: #bfa37a; }
+        .action-btns { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 10px; }
+        .btn-side { padding: 9px; border: 1px solid var(--gold-dim); background: transparent; color: var(--gold); cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+        .btn-side.primary { background: var(--gold); color: #2c1a04; font-weight: bold; border: 1px solid var(--gold); }
+
+        .paper-stage { flex: 1; border-radius: 6px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        .letter-textarea { width: 85%; height: 85%; background: transparent; border: none; resize: none; outline: none; font-size: 1.25rem; line-height: 1.8; z-index: 5; padding: 10px; }
+
+        .paper-retro { background-color: var(--paper-cream); background-image: linear-gradient(rgba(180, 160, 120, 0.15) 1px, transparent 1px); background-size: 100% 2rem; border: 20px solid #e2d4b7; box-shadow: inset 0 0 40px rgba(139,118,72,0.4), 0 15px 40px rgba(0,0,0,0.6); }
+        .paper-future { background: #05070f; border: 2px solid #00f0ff; box-shadow: 0 0 20px rgba(0,240,255,0.3), inset 0 0 30px rgba(0,240,255,0.15); }
+        .paper-future::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 160px; pointer-events: none; opacity: 0.18; z-index: 1; background: linear-gradient(90deg, transparent 5%, #00f0ff 5%, #00f0ff 15%, transparent 15%, transparent 22%, #ff007f 22%, #ff007f 35%, transparent 35%), linear-gradient(90deg, transparent 10%, #060913 10%, #060913 40%, transparent 40%, transparent 45%, #060913 45%, #060913 75%, transparent 75%), linear-gradient(90deg, transparent 30%, #00f0ff 30%, #00f0ff 42%, transparent 42%, transparent 60%, #ff007f 60%, #ff007f 80%, transparent 80%); background-size: 300px 100%, 200px 80%, 400px 90%; background-repeat: repeat-x; background-position: bottom left; mask-image: linear-gradient(to top, black 30%, transparent 100%); -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%); }
+        .paper-future::before { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 240, 255, 0.05) 50%); z-index: 2; background-size: 100% 4px; pointer-events: none; }
+        .paper-space { background: radial-gradient(circle at center, #0d1527 0%, #04060b 100%); border: 2px solid #4b5563; }
+        .space-canvas, .sea-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        @keyframes floatEffect { 0% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-8px) rotate(0.3deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+        .space-floating-active { animation: floatEffect 7s ease-in-out infinite; }
+        .paper-sea { background: linear-gradient(180deg, #062030 0%, #010a12 100%); border: 2px solid #14b8a6; }
+        .paper-sea::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, transparent 40%, rgba(20, 184, 166, 0.08) 50%, transparent 60%); background-size: 200% 200%; animation: waveLight 10s infinite linear; pointer-events: none; z-index: 2; }
+
+        .dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: none; justify-content: center; align-items: center; z-index: 150; backdrop-filter: blur(5px); }
+        .lock-box { background: #1a0f03; border: 2px solid var(--gold); border-radius: 6px; padding: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 340px; display: flex; flex-direction: column; gap: 18px; }
+        .lock-seal { width: 50px; height: 50px; background: #8b1e1e; border-radius: 50%; margin: 0 auto; box-shadow: 0 0 10px var(--gold-dim); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.2rem; }
+
+        .mythic-dialog-box { background: linear-gradient(135deg, #221203 0%, #0d0601 100%); border: 2px solid var(--gold); border-radius: 4px; padding: 25px 30px; width: 380px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 0 15px rgba(197,160,89,0.15); display: flex; flex-direction: column; gap: 20px; animation: mythicPop 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        @keyframes mythicPop { 0% { transform: scale(0.9) translateY(10px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        .mythic-dialog-msg { font-size: 1.05rem; line-height: 1.6; color: var(--paper-cream); text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
+        .mythic-dialog-btns { display: flex; gap: 12px; justify-content: center; }
+        .btn-mythic { background: #361f0a; border: 1px solid var(--gold-dim); color: var(--gold); padding: 8px 24px; font-size: 0.9rem; border-radius: 3px; cursor: pointer; letter-spacing: 1px; transition: all 0.2s; }
+        .btn-mythic:hover { background: var(--gold); color: #150b02; border-color: var(--gold); }
+        .btn-mythic.confirm-major { background: linear-gradient(to bottom, #8b1e1e, #5a1111); border-color: #b03535; color: #f4ecd8; font-weight: bold; }
+        .btn-mythic.confirm-major:hover { background: #b03535; box-shadow: 0 0 8px rgba(176,53,53,0.6); }
+    </style>
+</head>
+<body>
+
+    <div class="body-light-overlay"></div>
+    <div class="archive-bg-decor">
+        <div class="manuscript-text text-pos-1">Omnia mecum porto.<br>Tempus fugit, aeternitas manet.<br>Annum 1442. Secretum Tabularium.</div>
+        <div class="manuscript-text text-pos-2">"To write is to summon ancient spirits..."<br>Deep within the forgotten chest, No.09.<br>The ink never fades, the word survives.</div>
+    </div>
+
+    <main class="page-view active" id="viewHall">
+        <div class="main-hall-grid">
+            <div class="archive-title-area">
+                <h1>時空郵局<br>檔案庫</h1>
+                <p>— 阁下的信件，将被妥善保管于世纪的罅隙中 —</p>
+            </div>
+            <div class="archive-display-area">
+                <div class="scattered-paper paper-1"></div>
+                <div class="scattered-paper paper-2"></div>
+                <div class="main-cabinet">
+                    <span class="cabinet-label">GLOBAL ARCHIVE</span>
+                    <button class="btn-retro" id="btnOpenWorkspace">启 封 信 笺</button>
+                    <span class="hall-nav-link" onclick="switchView('viewShelf')">查看所有共享信笺 (暗格) →</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <section class="page-view" id="viewShelf">
+        <div class="shelf-header">
+            <h2>所有信笺柜 • 共享暗格</h2>
+            <button class="btn-retro" style="padding: 8px 20px; font-size: 0.95rem;" onclick="switchView('viewHall')">← 返回大厅</button>
+        </div>
+        <div class="shelf-grid" id="shelfGrid"></div>
+    </section>
+
+    <div class="workspace-overlay" id="workspaceOverlay">
+        <div class="editor-container">
+            <div class="control-panel">
+                <div class="panel-input-group">
+                    <label for="letterTitle">信笺标题</label>
+                    <input type="text" id="letterTitle" placeholder="未命名信笺">
+                </div>
+                <div class="panel-input-group">
+                    <label for="letterPassword">共享加锁密匙 (选填)</label>
+                    <input type="password" id="letterPassword" placeholder="留空则所有人可读">
+                </div>
+                <div class="panel-section">
+                    <h3>馆藏信纸</h3>
+                    <div class="theme-selector">
+                        <button class="theme-btn active" data-theme="retro">复古公文信纸</button>
+                        <button class="theme-btn" data-theme="future">未来信纸 (Neon)</button>
+                        <button class="theme-btn" data-theme="space">宇宙邮局信纸</button>
+                        <button class="theme-btn" data-theme="sea">海底邮局信纸</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3>撰写手稿字体</h3>
+                    <select class="font-select" id="fontSelector">
+                        <option value="'Georgia', serif">衬线古典 (Georgia)</option>
+                        <option value="'Noto Serif SC', serif">古风宋体 (Noto Serif)</option>
+                        <option value="'Courier New', monospace">打字机体 (Courier New)</option>
+                        <option value="'Kaiti', 'STKaiti', serif">正统楷体 (Kaiti)</option>
+                    </select>
+                </div>
+                <div class="panel-section">
+                    <h3>墨水色彩 (10色)</h3>
+                    <div class="color-picker" id="colorPicker">
+                        <div class="color-dot active" style="background: #3a2e1d;" data-color="#3a2e1d"></div>
+                        <div class="color-dot" style="background: #8b1e1e;" data-color="#8b1e1e"></div>
+                        <div class="color-dot" style="background: #00f0ff;" data-color="#00f0ff"></div>
+                        <div class="color-dot" style="background: #ff007f;" data-color="#ff007f"></div>
+                        <div class="color-dot" style="background: #99f6e4;" data-color="#99f6e4"></div>
+                        <div class="color-dot" style="background: #ffffff;" data-color="#ffffff"></div>
+                        <div class="color-dot" style="background: #eab308;" data-color="#eab308"></div>
+                        <div class="color-dot" style="background: #a855f7;" data-color="#a855f7"></div>
+                        <div class="color-dot" style="background: #22c55e;" data-color="#22c55e"></div>
+                        <div class="color-dot" style="background: #f97316;" data-color="#f97316"></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3>附加印章</h3>
+                    <div class="emoji-grid" id="emojiGrid">
+                        <div class="emoji-item">✉️</div><div class="emoji-item">📜</div><div class="emoji-item">⏳</div><div class="emoji-item">🚀</div><div class="emoji-item">✨</div>
+                        <div class="emoji-item">🌙</div><div class="emoji-item">⚓</div><div class="emoji-item">✒️</div><div class="emoji-item">🧭</div><div class="emoji-item">💽</div>
+                    </div>
+                </div>
+                <div class="action-btns">
+                    <button class="btn-side primary" id="btnSave">封缄入云端</button>
+                    <button class="btn-side" id="btnClose">舍弃返回</button>
+                </div>
+            </div>
+            <div class="paper-stage paper-retro" id="paperStage">
+                <canvas class="space-canvas" id="spaceCanvas" style="display:none;"></canvas>
+                <canvas class="sea-canvas" id="seaCanvas" style="display:none;"></canvas>
+                <textarea class="letter-textarea" id="letterTextarea" placeholder="展开信笺，写下您想留存的字句..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="lockOverlay">
+        <div class="lock-box">
+            <div class="lock-seal">🔒</div>
+            <h3 style="color: var(--gold); letter-spacing: 1px;">此信笺已被火漆封缄</h3>
+            <p style="font-size: 0.85rem; color: #8c734b;" id="lockPromptTitle">请输入持信人的专属密匙</p>
+            <input type="password" id="unlockInput" placeholder="输入密码">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-retro" style="flex:1; padding: 8px; font-size:0.95rem;" id="btnVerifyUnlock">开封</button>
+                <button class="btn-retro" style="flex:1; padding: 8px; font-size:0.95rem; background: transparent;" id="btnCancelUnlock">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="workspace-overlay" id="readOverlay">
+        <div class="editor-container" style="max-width: 750px;">
+            <div class="paper-stage" id="readPaperStage">
+                <canvas class="space-canvas" id="readSpaceCanvas" style="display:none;"></canvas>
+                <canvas class="sea-canvas" id="readSeaCanvas" style="display:none;"></canvas>
+                <textarea class="letter-textarea" id="readTextarea" readonly></textarea>
+                <button class="btn-retro" style="position: absolute; bottom: 20px; right: 20px; padding: 8px 20px; font-size:0.9rem; z-index:10;" id="btnCloseRead">合上信笺</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="mythicDialogOverlay" style="z-index: 200;">
+        <div class="mythic-dialog-box">
+            <div class="lock-seal" id="mythicDialogIcon" style="background: #5c3d17;">📜</div>
+            <div class="mythic-dialog-msg" id="mythicDialogMsg">这里是提词器的秘密信道</div>
+            <div class="mythic-dialog-btns" id="mythicDialogBtns"></div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 【核心配置：在此处填入你在 Supabase 申请的密钥凭证】
+        // =========================================================================
+        const SUPABASE_CONFIG = {
+            url: "https://zwizqlsqkissucqbvzjw.supabase.co/rest/v1/",
+            anonKey: "sb_publishable_SFqh1ZdezXRilENdhc8UFQ_ZtZ5r2Qe"
+        };
+
+        // 初始化 Supabase 客户端
+        let supabaseClient = null;
+        if(SUPABASE_CONFIG.url !== "请在这里填入你的Project URL") {
+            supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        }
+
+        let currentTheme = 'retro';
+        let activeLetter = null;
+        let cachedLetters = [];
+        let animationFrameIds = { space: null, sea: null, readSpace: null, readSea: null };
+        const themeDefaultColors = { retro: '#3a2e1d', future: '#00f0ff', space: '#e0e7ff', sea: '#99f6e4' };
+
+        // DOM 获取
+        const workspaceOverlay = document.getElementById('workspaceOverlay');
+        const paperStage = document.getElementById('paperStage');
+        const letterTextarea = document.getElementById('letterTextarea');
+        const letterTitle = document.getElementById('letterTitle');
+        const letterPassword = document.getElementById('letterPassword');
+        const fontSelector = document.getElementById('fontSelector');
+        const lockOverlay = document.getElementById('lockOverlay');
+        const unlockInput = document.getElementById('unlockInput');
+        const readOverlay = document.getElementById('readOverlay');
+        const shelfGrid = document.getElementById('shelfGrid');
+        const mythicDialogOverlay = document.getElementById('mythicDialogOverlay');
+        const mythicDialogMsg = document.getElementById('mythicDialogMsg');
+        const mythicDialogBtns = document.getElementById('mythicDialogBtns');
+        const mythicDialogIcon = document.getElementById('mythicDialogIcon');
+        const spaceCanvas = document.getElementById('spaceCanvas');
+        const seaCanvas = document.getElementById('seaCanvas');
+        const readSpaceCanvas = document.getElementById('readSpaceCanvas');
+        const readSeaCanvas = document.getElementById('readSeaCanvas');
+
+        const MythicDialog = {
+            alert: function(msg, icon = '📜') {
+                return new Promise((resolve) => {
+                    mythicDialogMsg.innerText = msg; mythicDialogIcon.innerText = icon; mythicDialogBtns.innerHTML = '';
+                    const btn = document.createElement('button'); btn.className = 'btn-mythic'; btn.innerText = '已知晓';
+                    btn.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(); };
+                    mythicDialogBtns.appendChild(btn); mythicDialogOverlay.style.display = 'flex';
+                });
+            },
+            confirm: function(msg, icon = '⏳') {
+                return new Promise((resolve) => {
+                    mythicDialogMsg.innerText = msg; mythicDialogIcon.innerText = icon; mythicDialogBtns.innerHTML = '';
+                    const btnCancel = document.createElement('button'); btnCancel.className = 'btn-mythic'; btnCancel.innerText = '留在此处';
+                    btnCancel.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(false); };
+                    const btnConfirm = document.createElement('button'); btnConfirm.className = 'btn-mythic confirm-major'; btnConfirm.innerText = '断然离去';
+                    btnConfirm.onclick = () => { mythicDialogOverlay.style.display = 'none'; resolve(true); };
+                    mythicDialogBtns.appendChild(btnCancel); mythicDialogBtns.appendChild(btnConfirm); mythicDialogOverlay.style.display = 'flex';
+                });
+            }
+        };
+
+        function switchView(viewId) {
+            document.querySelectorAll('.page-view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            if(viewId === 'viewShelf') fetchCloudLetters();
+        }
+
+        document.getElementById('btnOpenWorkspace').addEventListener('click', () => {
+            if(!supabaseClient) {
+                MythicDialog.alert("检测到未配置云端钥匙，请先在代码中配置 SUPABASE_CONFIG", "⚠️");
+                return;
+            }
+            workspaceOverlay.style.display = 'flex';
+            letterTitle.value = ''; letterPassword.value = ''; letterTextarea.value = '';
+            fontSelector.value = "'Georgia', serif"; letterTextarea.style.fontFamily = "'Georgia', serif";
+            triggerThemeEngine('retro', spaceCanvas, seaCanvas, 'write');
+        });
+
+        document.getElementById('btnClose').addEventListener('click', async () => {
+            const userChoice = await MythicDialog.confirm('阁下确定离开？未做封缄的灵感字句将消散于虚无之中。', '🖋️');
+            if(userChoice) { stopAllEngines(); workspaceOverlay.style.display = 'none'; }
+        });
+
+        fontSelector.addEventListener('change', (e) => { letterTextarea.style.fontFamily = e.target.value; });
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTheme = btn.getAttribute('data-theme');
+                paperStage.className = 'paper-stage paper-' + currentTheme;
+                letterTextarea.style.color = themeDefaultColors[currentTheme];
+                if(currentTheme === 'space') letterTextarea.classList.add('space-floating-active');
+                else letterTextarea.classList.remove('space-floating-active');
+                triggerThemeEngine(currentTheme, spaceCanvas, seaCanvas, 'write');
+                document.querySelectorAll('.color-dot').forEach(dot => {
+                    dot.classList.toggle('active', dot.getAttribute('data-color') === themeDefaultColors[currentTheme]);
+                });
+            });
+        });
+
+        document.querySelectorAll('.color-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                letterTextarea.style.color = dot.getAttribute('data-color');
+            });
+        });
+
+        document.getElementById('emojiGrid').addEventListener('click', (e) => {
+            if(e.target.classList.contains('emoji-item')) {
+                const emoji = e.target.innerText; const start = letterTextarea.selectionStart;
+                letterTextarea.value = letterTextarea.value.substring(0, start) + emoji + letterTextarea.value.substring(letterTextarea.selectionEnd);
+                letterTextarea.focus(); letterTextarea.selectionStart = letterTextarea.selectionEnd = start + emoji.length;
+            }
+        });
+
+        function stopAllEngines() {
+            Object.keys(animationFrameIds).forEach(key => { if(animationFrameIds[key]) cancelAnimationFrame(animationFrameIds[key]); });
+        }
+
+        function triggerThemeEngine(theme, sCanvas, mCanvas, modePrefix) {
+            stopAllEngines(); sCanvas.style.display = 'none'; mCanvas.style.display = 'none';
+            if(theme === 'space') { sCanvas.style.display = 'block'; initSpaceEngine(sCanvas, modePrefix); } 
+            else if (theme === 'sea') { mCanvas.style.display = 'block'; initSeaEngine(mCanvas, modePrefix); }
+        }
+
+        function initSpaceEngine(canvas, key) {
+            const ctx = canvas.getContext('2d'); const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width; canvas.height = rect.height; const stars = [];
+            for(let i=0; i<60; i++) { stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.2, alpha: Math.random() }); }
+            function animate() {
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                stars.forEach(s => { s.alpha += (Math.random() - 0.5) * 0.05; s.alpha = Math.max(0.1, Math.min(1, s.alpha)); ctx.fillStyle = `rgba(255,255,255,${s.alpha})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+                animationFrameIds[key] = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function initSeaEngine(canvas, key) {
+            const ctx = canvas.getContext('2d'); const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width; canvas.height = rect.height; const bubbles = [];
+            for(let i=0; i<15; i++) { bubbles.push({ x: Math.random()*canvas.width, y: canvas.height + Math.random()*40, r: Math.random()*3+1, speed: Math.random()*0.6+0.4 }); }
+            function animate() {
+                ctx.clearRect(0,0, canvas.width, canvas.height); ctx.fillStyle = "rgba(255, 255, 255, 0.12)"; ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 1;
+                bubbles.forEach(b => { b.y -= b.speed; if(b.y < -10) b.y = canvas.height + 10; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); ctx.stroke(); });
+                animationFrameIds[key] = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // ==========================================
+        // 【核心更替：Supabase 网络上传与拉取模块】
+        // ==========================================
+        
+        // 发信：保存到 Supabase
+        document.getElementById('btnSave').addEventListener('click', async () => {
+            const content = letterTextarea.value.trim();
+            if(!content) { await MythicDialog.alert('信笺空无一字，契约不立。', '❌'); return; }
+
+            const title = document.getElementById('letterTitle').value.trim() || '未命名信笺';
+            const password = document.getElementById('letterPassword').value.trim();
+            const color = letterTextarea.style.color;
+            const fontFamily = letterTextarea.style.fontFamily;
+
+            try {
+                // 写入数据到名为 'letters' 的表中
+                const { data, error } = await supabaseClient
+                    .from('letters')
+                    .insert([
+                        { title, content, password, theme: currentTheme, color, fontFamily }
+                    ]);
+
+                if (error) throw error;
+
+                await MythicDialog.alert(`【时空邮局】信笺《${title}》已顺利飞越鸿沟，存入中央云端档案库！`, '✨');
+                stopAllEngines();
+                workspaceOverlay.style.display = 'none';
+                switchView('viewShelf');
+            } catch (error) {
+                await MythicDialog.alert(`归档云端失败，请检查网络或凭证：${error.message}`, '❌');
+            }
+        });
+
+        // 阅信：从 Supabase 拉取所有信
+        async function fetchCloudLetters() {
+            shelfGrid.innerHTML = '<div class="no-letters-tip">— 正在翻阅中央云端档案库... —</div>';
+
+            try {
+                // 查询 letters 表中的所有数据，按照时间倒序
+                const { data, error } = await supabaseClient
+                    .from('letters')
+                    .select('*')
+                    .order('id', { ascending: false });
+
+                if (error) throw error;
+
+                cachedLetters = data.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    content: item.content,
+                    password: item.password,
+                    theme: item.theme,
+                    color: item.color,
+                    fontFamily: item.fontFamily,
+                    date: item.created_at ? new Date(item.created_at).toLocaleDateString() : new Date().toLocaleDateString()
+                }));
+                renderShelfHTML();
+            } catch (error) {
+                shelfGrid.innerHTML = `<div class="no-letters-tip" style="color:#ef4444">翻阅云端失败: ${error.message}</div>`;
+            }
+        }
+
+        function renderShelfHTML() {
+            shelfGrid.innerHTML = '';
+            if(cachedLetters.length === 0) { shelfGrid.innerHTML = '<div class="no-letters-tip">— 云端档案库空空如也 —</div>'; return; }
+
+            cachedLetters.forEach(letter => {
+                const env = document.createElement('div'); env.classList.add('envelope-item');
+                env.onclick = () => openEnvelope(letter.id);
+                const sealHtml = letter.password ? '<div class="envelope-seal">封</div>' : '<div class="envelope-seal" style="background:#4b5563">启</div>';
+                env.innerHTML = `${sealHtml}<div class="envelope-title">${letter.title}</div><div class="envelope-meta">${letter.date}</div>`;
+                shelfGrid.appendChild(env);
+            });
+        }
+
+        function openEnvelope(id) {
+            const letter = cachedLetters.find(l => l.id === id);
+            if(!letter) return;
+
+            if(letter.password) {
+                activeLetter = letter; unlockInput.value = '';
+                document.getElementById('lockPromptTitle').innerText = `请输入《${letter.title}》的专属密匙`;
+                lockOverlay.style.display = 'flex';
+            } else { showReaderStage(letter); }
+        }
+
+        document.getElementById('btnVerifyUnlock').addEventListener('click', async () => {
+            if(activeLetter && unlockInput.value === activeLetter.password) {
+                lockOverlay.style.display = 'none'; showReaderStage(activeLetter);
+            } else { 
+                await MythicDialog.alert('持信密匙似乎有误。火漆完好无损，拒绝开启。', '🔑');
+            }
+        });
+
+        document.getElementById('btnCancelUnlock').addEventListener('click', () => { lockOverlay.style.display = 'none'; activeLetter = null; });
+
+        function showReaderStage(letter) {
+            const readPaperStage = document.getElementById('readPaperStage'); const readTextarea = document.getElementById('readTextarea');
+            readPaperStage.className = 'paper-stage paper-' + letter.theme; readTextarea.value = letter.content; 
+            readTextarea.style.color = letter.color; readTextarea.style.fontFamily = letter.fontFamily || "'Georgia', serif";
+            if(letter.theme === 'space') readTextarea.classList.add('space-floating-active');
+            else readTextarea.classList.remove('space-floating-active');
+            triggerThemeEngine(letter.theme, readSpaceCanvas, readSeaCanvas, 'readSpace'); readOverlay.style.display = 'flex';
+        }
+
+        document.getElementById('btnCloseRead').addEventListener('click', () => { stopAllEngines(); readOverlay.style.display = 'none'; });
+    </script>
+</body>
+</html>
