@@ -150,7 +150,7 @@
     <main class="page-view active" id="viewHall">
         <div class="main-hall-grid">
             <div class="archive-title-area">
-                <h1>時空郵局<br>檔案庫</h1>
+                <h1>時空郵局<br>檔案库</h1>
                 <p>— 阁下的信件，将被妥善保管于世纪的罅隙中 —</p>
             </div>
             <div class="archive-display-area">
@@ -278,10 +278,12 @@
             anonKey: "sb_publishable_SFqh1ZdezXRilENdhc8UFQ_ZtZ5r2Qe"
         };
 
-        // 初始化 Supabase 客户端
+        // 初始化 Supabase 客户端 (已升级至 v2 可用版本)
         let supabaseClient = null;
-        if(SUPABASE_CONFIG.url !== "请在这里填入你的Project URL") {
-            supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        if(SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes("请在这里")) {
+            supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+                auth: { persistSession: false }
+            });
         }
 
         let currentTheme = 'retro';
@@ -345,7 +347,7 @@
             workspaceOverlay.style.display = 'flex';
             letterTitle.value = ''; letterPassword.value = ''; letterTextarea.value = '';
             fontSelector.value = "'Georgia', serif"; letterTextarea.style.fontFamily = "'Georgia', serif";
-            triggerThemeEngine('retro', spaceCanvas, seaCanvas, 'write');
+            triggerThemeEngine('retro', spaceCanvas, seaCanvas, 'space');
         });
 
         document.getElementById('btnClose').addEventListener('click', async () => {
@@ -364,7 +366,7 @@
                 letterTextarea.style.color = themeDefaultColors[currentTheme];
                 if(currentTheme === 'space') letterTextarea.classList.add('space-floating-active');
                 else letterTextarea.classList.remove('space-floating-active');
-                triggerThemeEngine(currentTheme, spaceCanvas, seaCanvas, 'write');
+                triggerThemeEngine(currentTheme, spaceCanvas, seaCanvas, 'space');
                 document.querySelectorAll('.color-dot').forEach(dot => {
                     dot.classList.toggle('active', dot.getAttribute('data-color') === themeDefaultColors[currentTheme]);
                 });
@@ -463,7 +465,7 @@
                 const { data, error } = await supabaseClient
                     .from('letters')
                     .select('*')
-                    .order('id', { ascending: false });
+                    .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
